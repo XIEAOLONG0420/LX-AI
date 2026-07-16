@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  --color-accent: #E8A87C;
+  --color-accent-dark: #D4906A;
+  --color-accent-light: #F5DCC8;
+  --color-bg-warm: #FFF8F0;
+  --color-bg-card: #FFF0E0;
+  --color-text-primary: #5D4E37;
+  --color-text-secondary: #8B7355;
+  --color-text-muted: #B8A58C;
+  --color-green-online: #4CAF50;
+  --color-red-alert: #E57373;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-warm text-text-primary m-0 font-sans antialiased overflow-hidden select-none;
+    font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  }
+}
+
+.card-soft {
+  @apply bg-bg-card rounded-3xl shadow-sm;
+}
+
+.btn-accent {
+  @apply bg-accent text-white rounded-full font-bold shadow-md active:scale-95 transition-all;
+}
+
+.btn-accent:hover {
+  @apply bg-accent-dark;
+}
