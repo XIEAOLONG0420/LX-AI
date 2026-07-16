@@ -34,5 +34,4 @@ backend/lingxi.db
 *.ps1 
 start*.bat 
 _ignored/ 
-android/ 
 capacitor.config.json 
