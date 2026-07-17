@@ -4,10 +4,10 @@ import { startListening, stopListening, speak, checkSpeechSupport } from "../ser
 import { chat } from "../services/llmService";
 import { getWeatherData } from "../services/weatherService";
 
-const members = [
-  { id:1, name:"小明", relation:"儿子", color:"bg-[#E8A87C]" },
-  { id:2, name:"小红", relation:"女儿", color:"bg-[#D4A574]" },
-  { id:3, name:"老张", relation:"老伴", color:"bg-[#C49A6C]" },
+const FALLBACK_MEMBERS = [
+  { id:1, name:"小明", relation:"儿子", phone:"", color:"bg-[#E8A87C]" },
+  { id:2, name:"小红", relation:"女儿", phone:"", color:"bg-[#D4A574]" },
+  { id:3, name:"老张", relation:"老伴", phone:"", color:"bg-[#C49A6C]" },
 ];
 
 function Home({ onAction }) {
@@ -17,6 +17,20 @@ function Home({ onAction }) {
   const [weather, setWeather] = useState({ temp:"--", condition:"", tip:"" });
   const [greeting, setGreeting] = useState("");
   const busy = useRef(false);
+  const [members, setMembers] = useState([]);
+
+  useEffect(() => {
+    fetch("http://localhost:8000/api/family-members")
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.length > 0) {
+          setMembers(data.map((m, i) => ({ ...m, color: ["bg-[#E8A87C]", "bg-[#D4A574]", "bg-[#C49A6C]"][i % 3] })));
+        } else {
+          setMembers(FALLBACK_MEMBERS);
+        }
+      })
+      .catch(() => setMembers(FALLBACK_MEMBERS));
+  }, []);
 
   useEffect(() => {
     getWeatherData("郑州").then(d => d && setWeather(d));
@@ -28,6 +42,9 @@ function Home({ onAction }) {
     setReply("好的，正在给" + m.relation + "打电话");
     speak("好的，正在给" + m.name + "打电话");
     onAction && onAction("call_family_member", { member: m.relation });
+    if (m.phone) {
+      setTimeout(() => { window.location.href = "tel:" + m.phone; }, 2000);
+    }
   };
 
   const handlePress = async () => {
