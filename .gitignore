@@ -35,3 +35,4 @@ backend/lingxi.db
 start*.bat 
 _ignored/ 
 capacitor.config.json 
+backend/.env

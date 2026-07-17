@@ -1,4 +1,4 @@
-﻿import sys, os
+import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "lib"))
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -8,11 +8,12 @@ from pydantic import BaseModel
 from database import engine, Base, SessionLocal
 from models import FamilyMember, Medication, ReminderConfig, CheckIn
 from datetime import date, datetime
-from typing import Optional
+from typing import Optional, List, Any
+from llm_service import call_deepseek, get_app_tools
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="灵犀·心伴 API")
+app = FastAPI(title="????? API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,10 +29,30 @@ class FamilyMemberCreate(BaseModel):
     phone: str = ""
     wechat_id: str = ""
 
+class ChatMessage(BaseModel):
+    role: str
+    content: Optional[str] = None
+
+class ChatRequest(BaseModel):
+    messages: List[ChatMessage]
+    tools: Optional[List[Any]] = None
+
+class ChatResponse(BaseModel):
+    toolName: str
+    toolArgs: Any
+
 # ----- Health -----
 @app.get("/health")
 def health():
     return {"status": "ok", "version": "0.1.0"}
+
+# ----- Chat / LLM -----
+@app.post("/api/chat", response_model=ChatResponse)
+async def chat_endpoint(req: ChatRequest):
+    messages = [m.model_dump() for m in req.messages]
+    tools = req.tools if req.tools else get_app_tools()
+    result = await call_deepseek(messages, tools)
+    return result
 
 # ----- Family Members -----
 @app.get("/api/family-members")
