@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+﻿import React, { useState, useEffect, useRef } from "react";
 import { Mic, Sun, Pill, CheckCircle2 } from "lucide-react";
 import { startListening, stopListening, speak, checkSpeechSupport } from "../services/speechService";
 import { getWeatherData } from "../services/weatherService";
@@ -35,7 +35,9 @@ function Home({ onAction }) {
     try {
       setStatus("listening");
       setTran("正在聊听...");
-      const { text } = await startListening();
+      const { text } = await startListening({
+      onPartialResult: (partial) => setTran(partial)
+    });
       if (!text.trim()) { setStatus("idle"); busy.current = false; return; }
       setTran(text);
       setStatus("thinking");
