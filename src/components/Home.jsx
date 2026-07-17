@@ -1,13 +1,13 @@
-﻿import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Mic, Sun, Pill, CheckCircle2 } from "lucide-react";
 import { startListening, stopListening, speak, checkSpeechSupport } from "../services/speechService";
 import { chat } from "../services/llmService";
 import { getWeatherData } from "../services/weatherService";
 
 const members = [
-  { id:1, name:"小明", relation:"儿子", color:"bg-blue-200" },
-  { id:2, name:"小红", relation:"女儿", color:"bg-pink-200" },
-  { id:3, name:"老张", relation:"老伴", color:"bg-green-200" },
+  { id:1, name:"小明", relation:"儿子", color:"bg-[#E8A87C]" },
+  { id:2, name:"小红", relation:"女儿", color:"bg-[#D4A574]" },
+  { id:3, name:"老张", relation:"老伴", color:"bg-[#C49A6C]" },
 ];
 
 function Home({ onAction }) {
@@ -35,25 +35,43 @@ function Home({ onAction }) {
     busy.current = true;
     try {
       setStatus("listening");
-      setTran("正在聊听...");
+      setTran("正在聆听...");
       const { text } = await startListening({
-      onPartialResult: (partial) => setTran(partial)
-    });
+        onPartialResult: (partial) => setTran(partial)
+      });
       if (!text.trim()) { setStatus("idle"); busy.current = false; return; }
       setTran(text);
       setStatus("thinking");
-      if (["儿子","女儿","老伴"].some(w => text.includes(w))) {
-        const t = members.find(m => text.includes(m.relation));
-        t && handleCall(t);
+
+      const result = await chat(text);
+
+      if (result.toolName === "call_family_member") {
+        const memberRel = result.toolArgs.member;
+        const found = members.find(m => m.relation === memberRel);
+        if (found) {
+          handleCall(found);
+        } else {
+          const msg = "没找到" + memberRel + "的联系方式";
+          setReply(msg);
+          speak(msg);
+        }
+      } else if (result.toolName === "answer_question") {
+        const msg = result.toolArgs.reply || "好的奶奶";
+        setReply(msg);
+        speak(msg);
+      } else if (result.toolName === "navigate_to_page") {
+        onAction && onAction(result.toolName, result.toolArgs);
+      } else if (result.toolName === "play_entertainment") {
+        onAction && onAction(result.toolName, result.toolArgs);
       } else {
         const msg = weather.tip ? weather.condition + "，" + weather.tip : "好的奶奶，我在呢";
         setReply(msg);
         speak(msg);
       }
       setStatus("idle");
-    } catch(e) { 
+    } catch(e) {
       setStatus("idle");
-      const msg = "???????????????";
+      const msg = "网络出了点问题，等会儿再试试吧";
       setReply(msg);
       speak(msg);
     }
@@ -61,53 +79,83 @@ function Home({ onAction }) {
   };
 
   return (
-    <div className="flex flex-col h-full p-4 pt-6">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary">{greeting}，奶奶</h1>
-        </div>
-        <div className="w-12 h-12 rounded-full bg-accent-light flex items-center justify-center">
-          <Sun size={24} className="text-accent" />
-        </div>
-      </div>
-      <div className="card-soft p-4 mb-3">
-        <div className="flex justify-around">
-          {members.map(m => (
-            <button key={m.id} onClick={() => handleCall(m)} className="flex flex-col items-center">
-              <div className={"w-20 h-20 rounded-full " + m.color + " flex items-center justify-center shadow-md border-2 border-white"}>
-                <span className="text-3xl font-bold text-white">{m.name[0]}</span>
-              </div>
-              <span className="text-sm font-medium text-text-primary mt-2">{m.relation}</span>
-            </button>
-          ))}
+    <div className="flex flex-col h-full p-5 pt-7">
+
+      {/* Greeting */}
+      <div className="flex items-center justify-between mb-5">
+        <h1 className="text-3xl font-bold text-text-primary" style={{fontSize:"1.75rem"}}>{greeting}，奶奶</h1>
+        <div className="w-14 h-14 rounded-full bg-accent/15 flex items-center justify-center">
+          <Sun size={28} className="text-accent" />
         </div>
       </div>
-      <div className="card-soft p-4 mb-3 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Pill size={20} className="text-red-alert" />
-          <span className="text-sm font-bold">8:00 降压药 ✓</span>
+
+      {/* Family quick-dial */}
+      <div className="flex justify-around mb-6">
+        {members.map(m => (
+          <button key={m.id} onClick={() => handleCall(m)} className="flex flex-col items-center gap-2">
+            <div className={"w-24 h-24 rounded-full " + m.color + " flex items-center justify-center shadow-lg border-4 border-white ring-2 ring-accent/30"}>
+              <span className="text-4xl font-bold text-white drop-shadow-sm">{m.name[0]}</span>
+            </div>
+            <span className="text-lg font-medium text-text-primary">{m.relation}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Info row: reminder + weather */}
+      <div className="flex gap-3 mb-5">
+        <div className="flex-1 bg-white/70 backdrop-blur rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+              <Pill size={20} className="text-red-alert" />
+            </div>
+            <div>
+              <p className="text-xs text-text-muted">下次吃药</p>
+              <p className="text-base font-bold text-text-primary">8:00 降压药</p>
+            </div>
+            <CheckCircle2 size={20} className="text-green-online ml-auto" />
+          </div>
         </div>
-        <CheckCircle2 size={20} className="text-green-online" />
+        <div className="flex-1 bg-white/70 backdrop-blur rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl font-bold text-accent">{weather.temp}°</span>
+            <div>
+              <p className="text-xs text-text-muted">今日天气</p>
+              <p className="text-base font-bold text-text-primary">{weather.tip || "晴"}</p>
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="card-soft p-4 mb-3 flex items-center justify-between">
-        <span className="text-lg font-bold">{weather.temp}°C</span>
-        <span className="text-sm text-text-secondary">{weather.tip || ""}</span>
-      </div>
+
+      {/* Dialog bubble */}
       {(tran || reply) && (
-        <div className="card-soft p-4 mb-3 text-center">
-          <p className="text-lg">{reply || tran}</p>
+        <div className="bg-accent/10 rounded-3xl p-5 mb-4 text-center">
+          <p className="text-xl leading-relaxed text-text-primary font-medium">
+            {status === "listening" ? tran : (reply || tran)}
+          </p>
+          {status === "thinking" && (
+            <p className="text-sm text-text-muted mt-2">正在思考...</p>
+          )}
         </div>
       )}
+
       <div className="flex-1" />
-      <div className="flex flex-col items-center">
+
+      {/* Giant mic button */}
+      <div className="flex flex-col items-center pb-2">
         <button
           onMouseDown={handlePress}
           onMouseUp={() => stopListening()}
-          className="w-24 h-24 rounded-full bg-accent flex items-center justify-center shadow-lg active:scale-95"
+          className={`w-28 h-28 rounded-full flex items-center justify-center shadow-xl transition-all duration-200 active:scale-90 ${
+            status === "listening"
+              ? "bg-accent-dark scale-110 shadow-accent/30"
+              : "bg-accent hover:bg-accent-dark"
+          }`}
         >
-          <Mic size={40} color="white" />
+          <Mic size={48} color="white" />
         </button>
-        <p className="text-xs text-text-muted mt-2">按住说话</p>
+        <p className="text-base text-text-muted mt-3 font-medium">
+          {status === "listening" ? "松开发送" : "按住说话"}
+        </p>
       </div>
     </div>
   );
