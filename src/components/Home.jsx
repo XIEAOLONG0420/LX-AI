@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect, useRef } from "react";
 import { Mic, Sun, Pill, CheckCircle2 } from "lucide-react";
 import { startListening, stopListening, speak, checkSpeechSupport } from "../services/speechService";
+import { chat } from "../services/llmService";
 import { getWeatherData } from "../services/weatherService";
 
 const members = [
@@ -50,7 +51,12 @@ function Home({ onAction }) {
         speak(msg);
       }
       setStatus("idle");
-    } catch(e) { setStatus("idle"); }
+    } catch(e) { 
+      setStatus("idle");
+      const msg = "???????????????";
+      setReply(msg);
+      speak(msg);
+    }
     finally { busy.current = false; }
   };
 

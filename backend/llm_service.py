@@ -37,8 +37,8 @@ APP_TOOLS = [
                 "properties": {
                     "member": {
                         "type": "string",
-                        "enum": ["son", "daughter", "spouse"],
-                        "description": "Family member to call"
+                        "enum": ["儿子", "女儿", "老伴"],
+                        "description": "Family member to call: son, daughter, spouse"
                     }
                 },
                 "required": ["member"]

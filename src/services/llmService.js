@@ -11,7 +11,7 @@ const APP_TOOLS = [
         properties: {
           page: {
             type: "string",
-            enum: ["home", "family", "care", "entertainment"],
+            enum: ["儿子", "女儿", "老伴"],
             description: "Target page: home=main, family=family, care=health, entertainment=fun"
           }
         },
@@ -29,7 +29,7 @@ const APP_TOOLS = [
         properties: {
           member: {
             type: "string",
-            enum: ["son", "daughter", "spouse"],
+            enum: ["??", "??", "??"],
             description: "Family member to call"
           }
         },
