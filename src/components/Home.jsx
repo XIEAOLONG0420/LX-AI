@@ -76,6 +76,10 @@ function Home({ onAction }) {
         const msg = result.toolArgs.reply || "好的奶奶";
         setReply(msg);
         speak(msg);
+        if (result.toolArgs._weather) {
+          const w = result.toolArgs._weather;
+          setWeather({temp: String(w.temperature || ""), condition: w.condition || "", tip: ""});
+        }
       } else if (result.toolName === "navigate_to_page") {
         onAction && onAction(result.toolName, result.toolArgs);
       } else if (result.toolName === "play_entertainment") {
