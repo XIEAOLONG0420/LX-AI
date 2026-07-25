@@ -2,6 +2,8 @@ import os
 import json
 import httpx
 from dotenv import load_dotenv
+from database import SessionLocal
+from models import Medication
 
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
@@ -97,6 +99,23 @@ APP_TOOLS = [
             }
         }
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "query_medication",
+            "description": "Search for medication information in the knowledge base when user asks about a specific drug.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Medication name to search for"
+                    }
+                },
+                "required": ["name"]
+            }
+        }
+    },
 ]
 
 
@@ -153,6 +172,14 @@ async def call_deepseek(messages, tools=None):
             })
             return await call_deepseek(messages, tools)
 
+        # query_medication - search database
+        if tool_name == "query_medication":
+            name = tool_args.get("name", "")
+            med_info = query_medication_kb(name)
+            messages.append(message)
+            messages.append({"role": "tool", "tool_call_id": call["id"], "content": str(med_info)})
+            return await call_deepseek(messages, tools)
+
         return {
             "toolName": tool_name,
             "toolArgs": tool_args
@@ -189,6 +216,26 @@ async def get_real_weather(city):
             return f"{city} ??????????"
         except Exception:
             return f"{city} ??????????"
+
+
+
+def query_medication_kb(name):
+    """Search for medication info in the knowledge base."""
+    db = SessionLocal()
+    meds = db.query(Medication).filter(Medication.name.contains(name)).all()
+    db.close()
+    if not meds:
+        return json.dumps({"found": False, "message": f"\u672a\u627e\u5230\u836f\u54c1: {name}"}, ensure_ascii=False)
+    results = []
+    for m in meds:
+        results.append({
+            "name": m.name,
+            "dosage": m.dosage,
+            "purpose": m.purpose,
+            "side_effects": m.side_effects,
+            "notes": m.notes
+        })
+    return json.dumps({"found": True, "medications": results}, ensure_ascii=False)
 
 
 def get_app_tools():
