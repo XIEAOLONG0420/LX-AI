@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Mic, Sun, Pill, CheckCircle2 } from "lucide-react";
 import { startListening, stopListening, speak, checkSpeechSupport } from "../services/speechService";
 import { chat } from "../services/llmService";
-import { getWeatherData } from "../services/weatherService";
+import { getGpsCity, getWeatherData } from "../services/weatherService";
 
 const FALLBACK_MEMBERS = [
   { id:1, name:"小明", relation:"儿子", phone:"", color:"bg-[#E8A87C]" },
@@ -60,7 +60,8 @@ function Home({ onAction }) {
       setTran(text);
       setStatus("thinking");
 
-      const result = await chat(text);
+      const gpsCity = getGpsCity();
+      const result = await chat(text, [], { city: gpsCity });
 
       if (result.toolName === "call_family_member") {
         const memberRel = result.toolArgs.member;

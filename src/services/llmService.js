@@ -91,10 +91,11 @@ const APP_TOOLS = [
   }
 ];
 
-export async function chat(userMessage, history = []) {
+export async function chat(userMessage, history = [], context = {}) {
+  const enriched = context.city ? "[????: " + context.city + "] " + userMessage : userMessage;
   const messages = [
     ...history,
-    { role: "user", content: userMessage }
+    { role: "user", content: enriched }
   ];
 
   try {
