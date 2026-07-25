@@ -160,6 +160,13 @@ def checkin(reminder_id: int):
     db.close()
     return {"status": "ok", "checked": True}
 
+@app.get("/api/checkins/today")
+def get_today_checkins():
+    db = SessionLocal()
+    checks = db.query(CheckIn).filter(CheckIn.check_date == date.today()).all()
+    db.close()
+    return checks
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin_page():
     import pathlib
