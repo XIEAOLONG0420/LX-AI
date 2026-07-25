@@ -4,6 +4,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from database import engine, Base, SessionLocal
 from models import FamilyMember, Medication, ReminderConfig, CheckIn
@@ -72,13 +73,77 @@ def create_family(m: FamilyMemberCreate):
     db.close()
     return member
 
+# ----- Medications -----
+@app.get("/api/medications")
+def list_medications():
+    db = SessionLocal()
+    meds = db.query(Medication).all()
+    db.close()
+    return meds
+
+@app.post("/api/medications")
+def create_medication(m: MedicationCreate):
+    db = SessionLocal()
+    med = Medication(name=m.name, dosage=m.dosage, purpose=m.purpose, side_effects=m.side_effects, notes=m.notes)
+    db.add(med); db.commit(); db.refresh(med); db.close()
+    return med
+
+@app.put("/api/medications/{med_id}")
+def update_medication(med_id: int, m: MedicationUpdate):
+    db = SessionLocal()
+    med = db.query(Medication).filter(Medication.id == med_id).first()
+    if not med: db.close(); return {"error": "not found"}
+    for k, v in m.model_dump(exclude_unset=True).items():
+        setattr(med, k, v)
+    db.commit(); db.refresh(med); db.close()
+    return med
+
+@app.delete("/api/medications/{med_id}")
+def delete_medication(med_id: int):
+    db = SessionLocal()
+    med = db.query(Medication).filter(Medication.id == med_id).first()
+    if med: db.delete(med); db.commit()
+    db.close()
+    return {"deleted": True}
+
 # ----- Reminders -----
 @app.get("/api/reminders")
 def list_reminders():
     db = SessionLocal()
-    reminders = db.query(ReminderConfig).all()
+    rems = db.query(ReminderConfig).all()
     db.close()
-    return reminders
+    return rems
+
+@app.post("/api/reminders")
+def create_reminder(r: ReminderCreate):
+    from datetime import time
+    h, mi = r.time.split(":")
+    db = SessionLocal()
+    rem = ReminderConfig(medication_id=r.medication_id, time=time(int(h), int(mi)), days=r.days, active=r.active)
+    db.add(rem); db.commit(); db.refresh(rem); db.close()
+    return rem
+
+@app.put("/api/reminders/{rem_id}")
+def update_reminder(rem_id: int, r: ReminderUpdate):
+    from datetime import time
+    db = SessionLocal()
+    rem = db.query(ReminderConfig).filter(ReminderConfig.id == rem_id).first()
+    if not rem: db.close(); return {"error": "not found"}
+    data = r.model_dump(exclude_unset=True)
+    if "time" in data:
+        h, mi = data["time"].split(":")
+        data["time"] = time(int(h), int(mi))
+    for k, v in data.items(): setattr(rem, k, v)
+    db.commit(); db.refresh(rem); db.close()
+    return rem
+
+@app.delete("/api/reminders/{rem_id}")
+def delete_reminder(rem_id: int):
+    db = SessionLocal()
+    rem = db.query(ReminderConfig).filter(ReminderConfig.id == rem_id).first()
+    if rem: db.delete(rem); db.commit()
+    db.close()
+    return {"deleted": True}
 
 # ----- Check-in -----
 @app.post("/api/checkin/{reminder_id}")
@@ -94,3 +159,9 @@ def checkin(reminder_id: int):
     db.commit()
     db.close()
     return {"status": "ok", "checked": True}
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_page():
+    import pathlib
+    p = pathlib.Path(__file__).parent / "admin.html"
+    return p.read_text(encoding="utf-8")

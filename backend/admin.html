@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>???? ? ????</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"PingFang SC","Microsoft YaHei",sans-serif}
+body{background:#F5E6D3;color:#8B7355;min-height:100vh;padding:16px;max-width:600px;margin:0 auto}
+header{text-align:center;padding:16px 0 20px;font-size:1.1rem;font-weight:700;color:#8B7355;letter-spacing:1px}
+h2{font-size:1rem;margin-bottom:12px;color:#8B7355;border-left:3px solid #E8A87C;padding-left:10px}
+.section{background:#fff;border-radius:16px;padding:16px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+.form-row{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.form-row input,.form-row select{flex:1;min-width:80px;padding:10px 12px;border:1px solid #E8D5C0;border-radius:10px;font-size:0.9rem;outline:none;background:#FFF8F0;color:#5D4E37}
+.form-row input:focus,.form-row select:focus{border-color:#E8A87C}
+.btn-add{width:100%;padding:12px;background:#E8A87C;color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer}
+.btn-add:hover{background:#D4906A}
+.btn-del{background:none;border:none;color:#E57373;cursor:pointer;font-size:1.2rem;padding:4px}
+.item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #F5EDE3;font-size:0.9rem}
+.item:last-child{border-bottom:none}
+.item-info{flex:1;line-height:1.5}
+.item-name{font-weight:600;color:#5D4E37}
+.item-meta{color:#B8A58C;font-size:0.8rem}
+.empty{text-align:center;padding:20px;color:#B8A58C;font-size:0.85rem}
+.days-grid{display:flex;gap:4px;margin:8px 0;flex-wrap:wrap}
+.day-btn{padding:6px 10px;border:1px solid #E8D5C0;border-radius:8px;background:#FFF8F0;cursor:pointer;font-size:0.8rem;color:#8B7355;transition:all .2s}
+.day-btn.active{background:#E8A87C;color:#fff;border-color:#E8A87C}
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#5D4E37;color:#fff;padding:12px 24px;border-radius:12px;font-size:0.85rem;opacity:0;transition:opacity .3s;z-index:999}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header>???? ? ????</header>
+<div class="section"><h2>????</h2>
+<div class="form-row">
+<input id="medName" placeholder="???? (?: ???)">
+<input id="medDosage" placeholder="?? (?: 1?)">
+</div>
+<div class="form-row">
+<input id="medPurpose" placeholder="?? (?: ???)" style="flex:2">
+<input id="medSideEffects" placeholder="???" style="flex:1">
+</div>
+<button class="btn-add" onclick="addMedication()">+ ????</button>
+<div id="medList" class="empty">????????</div></div>
+<div class="section"><h2>????</h2>
+<div class="form-row"><select id="remMedicationId"><option value="">??????</option></select></div>
+<div class="form-row"><input type="time" id="remTime" value="08:00"></div>
+<div class="days-grid" id="daysGrid">
+<button class="day-btn active" data-day="1">?</button>
+<button class="day-btn active" data-day="2">?</button>
+<button class="day-btn active" data-day="3">?</button>
+<button class="day-btn active" data-day="4">?</button>
+<button class="day-btn active" data-day="5">?</button>
+<button class="day-btn active" data-day="6">?</button>
+<button class="day-btn active" data-day="7">?</button>
+</div>
+<button class="btn-add" onclick="addReminder()">+ ????</button>
+<div id="remList" class="empty">????????</div></div>
+<div id="toast" class="toast"></div>
+<script>
+const BASE="http://localhost:8000";
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2000)}
+async function loadMedications(){try{
+const r=await fetch(BASE+"/api/medications");const data=await r.json();
+const list=document.getElementById("medList");const sel=document.getElementById("remMedicationId");
+sel.innerHTML="<option value=''>????</option>";
+if(!data||!data.length){list.innerHTML='<div class="empty">????????</div>';return}
+list.innerHTML=data.map(m=>'<div class="item"><div class="item-info"><span class="item-name">'+m.name+'</span> <span class="item-meta">'+(m.dosage||"")+(m.purpose?" - "+m.purpose:"")+'</span></div><button class="btn-del" onclick="deleteMedication('+m.id+')">&times;</button></div>').join("");
+data.forEach(m=>{var o=document.createElement("option");o.value=m.id;o.textContent=m.name;sel.appendChild(o)});
+}catch(e){document.getElementById("medList").innerHTML='<div class="empty">??????</div>'}}
+async function addMedication(){var n=document.getElementById("medName").value.trim();if(!n){toast("???????");return}
+await fetch(BASE+"/api/medications",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:n,dosage:document.getElementById("medDosage").value.trim(),purpose:document.getElementById("medPurpose").value.trim(),side_effects:document.getElementById("medSideEffects").value.trim()})});
+document.getElementById("medName").value="";document.getElementById("medDosage").value="";document.getElementById("medPurpose").value="";document.getElementById("medSideEffects").value="";
+await loadMedications();toast("?????")}
+async function deleteMedication(id){if(!confirm("?????"))return;await fetch(BASE+"/api/medications/"+id,{method:"DELETE"});await loadMedications();await loadReminders();toast("???")}
+function getSelectedDays(){return Array.from(document.querySelectorAll("#daysGrid .day-btn.active")).map(b=>b.dataset.day).join(",")}
+async function loadReminders(){try{
+const r=await fetch(BASE+"/api/reminders");const data=await r.json();const list=document.getElementById("remList");
+if(!data||!data.length){list.innerHTML='<div class="empty">????????</div>';return}
+const meds=await(await fetch(BASE+"/api/medications")).json();
+list.innerHTML=data.map(function(r){var med=meds.find(function(m){return m.id===r.medication_id});var days=r.days?r.days.split(",").map(function(d){return["","?","?","?","?","?","?","?"][parseInt(d)]}).join(""):"??";return '<div class="item"><div class="item-info"><span class="item-name">'+(med?med.name:"????")+'</span> <span class="item-meta">'+r.time.substr(0,5)+" "+days+'</span></div><button class="btn-del" onclick="deleteReminder('+r.id+')">&times;</button></div>'}).join("")
+}catch(e){document.getElementById("remList").innerHTML='<div class="empty">??????</div>'}}
+async function addReminder(){var id=document.getElementById("remMedicationId").value;if(!id){toast("?????");return}
+var time=document.getElementById("remTime").value;if(!time){toast("?????");return}var days=getSelectedDays();
+await fetch(BASE+"/api/reminders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({medication_id:parseInt(id),time,days,active:true})});
+await loadReminders();toast("?????")}
+async function deleteReminder(id){if(!confirm("?????"))return;await fetch(BASE+"/api/reminders/"+id,{method:"DELETE"});await loadReminders();toast("???")}
+document.getElementById("daysGrid").addEventListener("click",function(e){if(e.target.classList.contains("day-btn"))e.target.classList.toggle("active")});
+loadMedications();loadReminders();
+</script>
+</body>
+</html>
